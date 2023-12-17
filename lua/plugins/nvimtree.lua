@@ -31,31 +31,39 @@ return {
 
 
 		-- Autocommand to open NvimTree on startup only for directories or [No Name] buffers
-        vim.api.nvim_create_autocmd("VimEnter", {
-            callback = function()
-                local path = vim.fn.expand('%:p') -- Get the full path of the current file
-                if path == "" or vim.fn.isdirectory(path) == 1 then
-                    -- If the path is a directory, change the working directory to that path
-                    if vim.fn.isdirectory(path) == 1 then
-                        vim.cmd('cd ' .. vim.fn.fnameescape(path))
-                    end
-                    -- Open NvimTree at the current working directory
-                    require("nvim-tree.api").tree.open()
-                end
-            end
-        })
-				
+		vim.api.nvim_create_autocmd("VimEnter", {
+			callback = function()
+				local path = vim.fn.expand('%:p') -- Get the full path of the current file
+				if path == "" or vim.fn.isdirectory(path) == 1 then
+					-- If no file is specified or the path is a directory, change the working directory
+					if path ~= "" then
+						vim.cmd('cd ' .. vim.fn.fnameescape(path))
+					end
+					-- Open NvimTree at the current working directory
+					require("nvim-tree.api").tree.open()
+				elseif vim.fn.filereadable(path) == 1 then
+					-- If the path is a file, change the working directory to the file's directory
+					local dir = vim.fn.fnamemodify(path, ':h')
+					vim.cmd('cd ' .. vim.fn.fnameescape(dir))
+					-- Do not open NvimTree automatically
+				end
+			end
+		})	
+
+
 
 		-- Autocommand to set Ctrl+X keymap for NvimTree with a delay
-        vim.api.nvim_create_autocmd("FileType", {
-            pattern = "NvimTree",
-            callback = function()
-                vim.defer_fn(function()
+		vim.api.nvim_create_autocmd("FileType", {
+			pattern = "NvimTree",
+			callback = function()
+				vim.defer_fn(function()
                     -- Set Ctrl+X to close NvimTree window and handle closing Neovim or switching buffer
                     vim.api.nvim_buf_set_keymap(0, 'n', '<C-x>', '<cmd>lua CloseNvimTree()<CR>', { noremap = true, silent = true })
                 end, 100) -- Delay in milliseconds
             end
         })
+
+
 
         -- Lua function to close NvimTree and handle window/buffer closing logic
         _G.CloseNvimTree = function()
